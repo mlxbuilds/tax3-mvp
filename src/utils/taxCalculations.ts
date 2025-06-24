@@ -1,8 +1,9 @@
-import { Transaction, FIFOPosition, TaxSummary } from '@/types/transaction';
+import { Transaction, FIFOPosition, TaxSummary } from "@/types/transaction";
 
 export class TaxCalculationEngine {
   private fifoQueues: Map<string, FIFOPosition[]> = new Map();
-  private washSalePositions: Map<string, { date: Date; loss: number }[]> = new Map();
+  private washSalePositions: Map<string, { date: Date; loss: number }[]> =
+    new Map();
 
   calculateTaxes(transactions: Transaction[]): TaxSummary {
     // Reset calculation state
@@ -24,31 +25,37 @@ export class TaxCalculationEngine {
     const form8949LongTerm: Transaction[] = [];
 
     for (const tx of sortedTransactions) {
-      if (tx.type === 'staking') {
+      if (tx.type === "staking") {
         // Staking rewards are ordinary income at FMV when received
         const income = tx.amount * (tx.price || 0);
         stakingIncome += income;
-        
+
         // Add to FIFO queue as cost basis for future disposals
         this.addToFIFO(tx.token, tx.amount, income, tx.timestamp, tx.signature);
-      } else if (tx.direction === 'in') {
+      } else if (tx.direction === "in") {
         // Acquisitions (buys, receives)
         const costBasis = tx.amount * (tx.price || 0);
-        this.addToFIFO(tx.token, tx.amount, costBasis, tx.timestamp, tx.signature);
-      } else if (tx.direction === 'out') {
+        this.addToFIFO(
+          tx.token,
+          tx.amount,
+          costBasis,
+          tx.timestamp,
+          tx.signature
+        );
+      } else if (tx.direction === "out") {
         // Disposals (sells, sends, swaps)
         const proceeds = tx.amount * (tx.price || 0);
         const { costBasis, isLongTerm, positions } = this.removeFromFIFO(
-          tx.token, 
-          tx.amount, 
+          tx.token,
+          tx.amount,
           tx.timestamp
         );
 
         const gainLoss = proceeds - costBasis;
-        
+
         // Check for wash sale
         const isWashSale = this.checkWashSale(tx.token, tx.timestamp, gainLoss);
-        
+
         // Update transaction with calculated values
         tx.costBasis = costBasis;
         tx.gainLoss = isWashSale ? 0 : gainLoss;
@@ -92,24 +99,34 @@ export class TaxCalculationEngine {
       totalTransactions: transactions.length,
       washSaleLosses,
       form8949ShortTerm,
-      form8949LongTerm
+      form8949LongTerm,
     };
   }
 
-  private addToFIFO(token: string, amount: number, costBasis: number, date: Date, signature: string) {
+  private addToFIFO(
+    token: string,
+    amount: number,
+    costBasis: number,
+    date: Date,
+    signature: string
+  ) {
     if (!this.fifoQueues.has(token)) {
       this.fifoQueues.set(token, []);
     }
-    
+
     this.fifoQueues.get(token)!.push({
       amount,
       costBasis,
       date,
-      signature
+      signature,
     });
   }
 
-  private removeFromFIFO(token: string, amount: number, saleDate: Date): {
+  private removeFromFIFO(
+    token: string,
+    amount: number,
+    saleDate: Date
+  ): {
     costBasis: number;
     isLongTerm: boolean;
     positions: FIFOPosition[];
@@ -125,7 +142,7 @@ export class TaxCalculationEngine {
       const daysHeld = Math.floor(
         (saleDate.getTime() - position.date.getTime()) / (1000 * 60 * 60 * 24)
       );
-      
+
       // Short-term if held for 365 days or less
       if (daysHeld <= 365) {
         isLongTerm = false;
@@ -142,14 +159,14 @@ export class TaxCalculationEngine {
         totalCostBasis += position.costBasis * ratio;
         position.amount -= remainingAmount;
         position.costBasis -= position.costBasis * ratio;
-        
+
         usedPositions.push({
           amount: remainingAmount,
           costBasis: position.costBasis * ratio,
           date: position.date,
-          signature: position.signature
+          signature: position.signature,
         });
-        
+
         remainingAmount = 0;
       }
     }
@@ -157,23 +174,32 @@ export class TaxCalculationEngine {
     return {
       costBasis: totalCostBasis,
       isLongTerm,
-      positions: usedPositions
+      positions: usedPositions,
     };
   }
 
-  private checkWashSale(token: string, saleDate: Date, gainLoss: number): boolean {
+  private checkWashSale(
+    token: string,
+    saleDate: Date,
+    gainLoss: number
+  ): boolean {
     if (gainLoss >= 0) return false; // Wash sale only applies to losses
 
-    const washSalePeriodStart = new Date(saleDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const washSalePeriodEnd = new Date(saleDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const washSalePeriodStart = new Date(
+      saleDate.getTime() - 30 * 24 * 60 * 60 * 1000
+    );
+    const washSalePeriodEnd = new Date(
+      saleDate.getTime() + 30 * 24 * 60 * 60 * 1000
+    );
 
     // Check if substantially identical property was acquired within wash sale period
     const queue = this.fifoQueues.get(token) || [];
-    
-    return queue.some(position => 
-      position.date >= washSalePeriodStart && 
-      position.date <= washSalePeriodEnd &&
-      position.date !== saleDate
+
+    return queue.some(
+      (position) =>
+        position.date >= washSalePeriodStart &&
+        position.date <= washSalePeriodEnd &&
+        position.date !== saleDate
     );
   }
 
@@ -186,3 +212,36 @@ export class TaxCalculationEngine {
     mostRecent.costBasis += disallowedLoss;
   }
 }
+
+// Export helper functions that are used by TaxCalculator
+export const calculateFIFOGains = (
+  trades: Transaction[],
+  swaps: Transaction[]
+) => {
+  const engine = new TaxCalculationEngine();
+  const combinedTransactions = [...trades, ...swaps];
+  const result = engine.calculateTaxes(combinedTransactions);
+
+  return {
+    totalGains: result.totalGains,
+    totalLosses: result.totalLosses,
+    shortTermGains: result.shortTermGains,
+    longTermGains: result.longTermGains,
+  };
+};
+
+export const calculateStakingIncome = (stakingTransactions: Transaction[]) => {
+  return stakingTransactions.reduce((total, tx) => {
+    return total + tx.amount * (tx.price || 0);
+  }, 0);
+};
+
+export const categorizeTransactions = (transactions: Transaction[]) => {
+  return {
+    trades: transactions.filter((tx) => tx.type === "trade"),
+    swaps: transactions.filter((tx) => tx.type === "swap"),
+    staking: transactions.filter((tx) => tx.type === "staking"),
+    transfers: transactions.filter((tx) => tx.type === "transfer"),
+    defi: transactions.filter((tx) => tx.type === "defi"),
+  };
+};
