@@ -1,107 +1,105 @@
 
 import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Wallet, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Search, AlertCircle } from 'lucide-react';
 import { TransactionProcessor } from './TransactionProcessor';
 
-export const WalletImport = () => {
+export const WalletImport: React.FC = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isValidated, setIsValidated] = useState(false);
-  const [showProcessor, setShowProcessor] = useState(false);
-  const { toast } = useToast();
+  const [error, setError] = useState('');
 
-  const validateSolanaAddress = (address: string) => {
+  const validateAddress = (address: string): boolean => {
     // Basic Solana address validation (base58, 32-44 characters)
-    const solanaRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-    return solanaRegex.test(address);
+    const solanaAddressPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    return solanaAddressPattern.test(address);
   };
 
-  const handleWalletSubmit = async () => {
-    if (!validateSolanaAddress(walletAddress)) {
-      toast({
-        title: "Invalid Wallet Address",
-        description: "Please enter a valid Solana wallet address.",
-        variant: "destructive",
-      });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!walletAddress.trim()) {
+      setError('Please enter a wallet address');
+      return;
+    }
+
+    if (!validateAddress(walletAddress.trim())) {
+      setError('Please enter a valid Solana wallet address');
       return;
     }
 
     setIsProcessing(true);
-    
-    // Simulate API call to fetch transactions
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsValidated(true);
-      setShowProcessor(true);
-      toast({
-        title: "Wallet Connected Successfully",
-        description: "Starting transaction analysis...",
-      });
-    }, 2000);
   };
 
-  if (showProcessor) {
-    return <TransactionProcessor walletAddress={walletAddress} />;
+  if (isProcessing) {
+    return <TransactionProcessor walletAddress={walletAddress.trim()} />;
   }
 
   return (
-    <div className="container mx-auto px-6 py-12">
-      <Card className="max-w-2xl mx-auto bg-white/10 backdrop-blur-lg border-white/20 shadow-2xl">
-        <div className="p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mb-4 shadow-lg">
-              <Wallet className="w-8 h-8 text-white" />
+    <div className="border-b border-border bg-black">
+      <div className="container mx-auto px-6 py-16">
+        <div className="max-w-2xl mx-auto">
+          <Card className="bg-card border-border">
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-sans font-semibold text-white mb-3">
+                  Import Wallet Transactions
+                </h2>
+                <p className="text-muted-foreground">
+                  Enter your Solana wallet address to analyze transactions and generate tax reports
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="wallet" className="block text-sm font-medium text-white mb-2">
+                    Wallet Address
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="wallet"
+                      type="text"
+                      placeholder="Enter Solana wallet address (e.g., 7xKXtg2CW87d...)"
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                      className="bg-input border-border text-white placeholder-muted-foreground font-mono text-sm pr-12"
+                    />
+                    <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  </div>
+                  {error && (
+                    <div className="flex items-center mt-2 text-sm text-destructive">
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                  disabled={!walletAddress.trim()}
+                >
+                  Analyze Transactions
+                </Button>
+              </form>
+
+              <div className="mt-8 p-4 bg-muted/30 border border-border rounded-lg">
+                <h4 className="font-medium text-white mb-2 text-sm">What we'll analyze:</h4>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• SOL transfers and trades</li>
+                  <li>• SPL token transactions</li>
+                  <li>• Staking rewards and validator income</li>
+                  <li>• DeFi interactions (swaps, lending, liquidity)</li>
+                  <li>• Proper cost basis calculations with FIFO method</li>
+                </ul>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Connect Your Wallet</h2>
-            <p className="text-white/70">Enter your Solana wallet address to begin generating your tax report</p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Enter Solana wallet address (e.g., 9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM)"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-14 text-lg backdrop-blur-sm focus:bg-white/10 transition-all duration-300"
-                disabled={isProcessing}
-              />
-              {isValidated && (
-                <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-green-400" />
-              )}
-            </div>
-
-            <Button
-              onClick={handleWalletSubmit}
-              disabled={!walletAddress || isProcessing}
-              className="w-full h-14 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Processing Wallet...
-                </>
-              ) : (
-                <>
-                  Start Tax Report Generation
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
-
-          <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg backdrop-blur-sm">
-            <p className="text-blue-200 text-sm">
-              <strong>Privacy Notice:</strong> Your wallet data is processed locally and never stored on our servers. 
-              We only fetch publicly available transaction data from the Solana blockchain.
-            </p>
-          </div>
+          </Card>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
