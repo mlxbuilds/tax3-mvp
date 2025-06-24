@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,18 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowUpDown, TrendingUp, Coins, FileText } from 'lucide-react';
 import { TransactionList } from './TransactionList';
 import { TaxCalculator } from './TaxCalculator';
-
-interface Transaction {
-  id: string;
-  type: 'transfer' | 'trade' | 'staking';
-  direction: 'in' | 'out';
-  amount: number;
-  token: string;
-  timestamp: Date;
-  signature: string;
-  price?: number;
-  classification: 'personal' | 'business' | 'unclassified';
-}
+import { Transaction } from '@/types/transaction';
 
 interface TransactionProcessorProps {
   walletAddress: string;

@@ -1,40 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calculator, Download, FileText, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { TaxCalculationEngine } from '@/utils/taxCalculations';
 import { PDFExporter } from './PDFExporter';
-
-interface Transaction {
-  id: string;
-  type: 'transfer' | 'trade' | 'staking' | 'swap' | 'defi';
-  direction: 'in' | 'out';
-  amount: number;
-  token: string;
-  timestamp: Date;
-  signature: string;
-  price?: number;
-  classification: 'personal' | 'business' | 'unclassified';
-  costBasis?: number;
-  gainLoss?: number;
-  isWashSale?: boolean;
-}
-
-interface TaxSummary {
-  totalGains: number;
-  totalLosses: number;
-  netGains: number;
-  shortTermGains: number;
-  longTermGains: number;
-  stakingIncome: number;
-  totalTransactions: number;
-  washSaleLosses: number;
-  form8949ShortTerm: Transaction[];
-  form8949LongTerm: Transaction[];
-}
+import { Transaction, TaxSummary } from '@/types/transaction';
 
 interface TaxCalculatorProps {
   transactions: Transaction[];

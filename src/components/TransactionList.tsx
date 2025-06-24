@@ -1,21 +1,9 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpDown, TrendingUp, Coins, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
-
-interface Transaction {
-  id: string;
-  type: 'transfer' | 'trade' | 'staking';
-  direction: 'in' | 'out';
-  amount: number;
-  token: string;
-  timestamp: Date;
-  signature: string;
-  price?: number;
-  classification: 'personal' | 'business' | 'unclassified';
-}
+import { Transaction } from '@/types/transaction';
 
 interface TransactionListProps {
   transactions: Transaction[];
