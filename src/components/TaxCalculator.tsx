@@ -206,7 +206,7 @@ export const TaxCalculator: React.FC<TaxCalculatorProps> = ({ transactions, wall
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-white/70">Long-term gains (>1 year)</span>
+                  <span className="text-white/70">Long-term gains ({'>'}1 year)</span>
                   <span className="text-white font-medium">
                     ${taxSummary.longTermGains.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
