@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowUpDown, TrendingUp, Coins, FileText } from 'lucide-react';
-import { TransactionList } from './TransactionList';
+import { Loader2, ArrowUpDown, TrendingUp, Coins, FileText, Zap, Shield, AlertTriangle } from 'lucide-react';
+import { TransactionTable } from './TransactionTable';
 import { TaxCalculator } from './TaxCalculator';
 import { Transaction } from '@/types/transaction';
 
@@ -15,75 +16,90 @@ export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({ wall
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currentStep, setCurrentStep] = useState<'processing' | 'review' | 'calculate'>('processing');
+  const [processingProgress, setProcessingProgress] = useState(0);
 
-  // Mock transaction data generation
+  // Generate comprehensive mock transaction data
   useEffect(() => {
-    const generateMockTransactions = (): Transaction[] => {
-      const mockData: Transaction[] = [
-        {
-          id: '1',
-          type: 'transfer',
-          direction: 'in',
-          amount: 10.5,
-          token: 'SOL',
-          timestamp: new Date('2024-01-15'),
-          signature: '3KmX7QNmQBZ8YzVLRv9p2Gg1hzXqVzJyN8KpqFrABC123',
-          price: 95.50,
-          classification: 'unclassified'
-        },
-        {
-          id: '2',
-          type: 'trade',
-          direction: 'out',
-          amount: 5.0,
-          token: 'SOL',
-          timestamp: new Date('2024-02-01'),
-          signature: '4NpY8ROnQCa9AzWMSw0q3Hh2kYrWzKzZO9LqrGsADE456',
-          price: 102.30,
-          classification: 'unclassified'
-        },
-        {
-          id: '3',
-          type: 'staking',
-          direction: 'in',
-          amount: 0.25,
-          token: 'SOL',
-          timestamp: new Date('2024-02-15'),
-          signature: '5QrZ9SPqQDb0BzXNTx1r4Ii3mZsXzLzAP0MrsHtAFG789',
-          price: 108.75,
-          classification: 'unclassified'
-        },
-        {
-          id: '4',
-          type: 'trade',
-          direction: 'in',
-          amount: 1000,
-          token: 'USDC',
-          timestamp: new Date('2024-03-01'),
-          signature: '6SsA0TRrQEe1CzYOUy2s5Jj4nAtYzMzBQ1NstIuAGH012',
-          price: 1.00,
-          classification: 'unclassified'
-        },
-        {
-          id: '5',
-          type: 'staking',
-          direction: 'in',
-          amount: 0.18,
-          token: 'SOL',
-          timestamp: new Date('2024-03-15'),
-          signature: '7TtB1USsQFf2DzZPVz3t6Kk5oButAzNcR2OtuJvAHI345',
-          price: 115.20,
-          classification: 'unclassified'
+    const generateLargeMockDataset = (): Transaction[] => {
+      const mockData: Transaction[] = [];
+      const tokens = ['SOL', 'USDC', 'USDT', 'RAY', 'SRM', 'MNGO', 'ORCA', 'STEP', 'COPE', 'MAPS'];
+      const types: Array<'transfer' | 'trade' | 'staking' | 'swap' | 'defi'> = ['transfer', 'trade', 'staking', 'swap', 'defi'];
+      const directions: Array<'in' | 'out'> = ['in', 'out'];
+      
+      // Generate between 100-2500 transactions for demo
+      const transactionCount = Math.floor(Math.random() * 2400) + 100;
+      
+      for (let i = 0; i < transactionCount; i++) {
+        const token = tokens[Math.floor(Math.random() * tokens.length)];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const direction = directions[Math.floor(Math.random() * directions.length)];
+        
+        // Generate realistic amounts based on token
+        let amount: number;
+        let price: number;
+        
+        if (token === 'SOL') {
+          amount = Math.random() * 1000 + 0.1;
+          price = Math.random() * 100 + 50; // $50-150
+        } else if (token === 'USDC' || token === 'USDT') {
+          amount = Math.random() * 50000 + 10;
+          price = 1.0;
+        } else {
+          amount = Math.random() * 100000 + 1;
+          price = Math.random() * 10 + 0.01; // $0.01-10
         }
-      ];
-      return mockData;
+        
+        // Generate date within last 2 years
+        const startDate = new Date('2022-01-01');
+        const endDate = new Date();
+        const randomDate = new Date(startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime()));
+        
+        mockData.push({
+          id: `tx_${i + 1}`,
+          type,
+          direction,
+          amount,
+          token,
+          timestamp: randomDate,
+          signature: `${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`,
+          price,
+          classification: 'unclassified'
+        });
+      }
+      
+      return mockData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     };
 
-    setTimeout(() => {
-      setTransactions(generateMockTransactions());
-      setIsLoading(false);
-      setCurrentStep('review');
-    }, 3000);
+    const simulateProcessing = () => {
+      const intervals = [
+        { progress: 10, message: 'Connecting to Solana RPC...' },
+        { progress: 25, message: 'Fetching transaction signatures...' },
+        { progress: 45, message: 'Parsing transaction data...' },
+        { progress: 65, message: 'Fetching token prices...' },
+        { progress: 80, message: 'Classifying DeFi activities...' },
+        { progress: 95, message: 'Calculating cost basis...' },
+        { progress: 100, message: 'Processing complete!' }
+      ];
+
+      let currentIndex = 0;
+      const updateProgress = () => {
+        if (currentIndex < intervals.length) {
+          setProcessingProgress(intervals[currentIndex].progress);
+          currentIndex++;
+          setTimeout(updateProgress, 500);
+        } else {
+          setTimeout(() => {
+            setTransactions(generateLargeMockDataset());
+            setIsLoading(false);
+            setCurrentStep('review');
+          }, 500);
+        }
+      };
+
+      updateProgress();
+    };
+
+    simulateProcessing();
   }, [walletAddress]);
 
   const updateTransactionClassification = (id: string, classification: 'personal' | 'business') => {
@@ -98,32 +114,64 @@ export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({ wall
     setCurrentStep('calculate');
   };
 
+  const getUnclassifiedCount = () => {
+    return transactions.filter(tx => tx.classification === 'unclassified').length;
+  };
+
+  const getTransactionStats = () => {
+    const stats = {
+      transfer: transactions.filter(tx => tx.type === 'transfer').length,
+      trade: transactions.filter(tx => tx.type === 'trade').length,
+      staking: transactions.filter(tx => tx.type === 'staking').length,
+      swap: transactions.filter(tx => tx.type === 'swap').length,
+      defi: transactions.filter(tx => tx.type === 'defi').length,
+      personal: transactions.filter(tx => tx.classification === 'personal').length,
+      business: transactions.filter(tx => tx.classification === 'business').length,
+      unclassified: transactions.filter(tx => tx.classification === 'unclassified').length,
+    };
+    return stats;
+  };
+
   if (isLoading || currentStep === 'processing') {
     return (
-      <div className="container mx-auto px-6 py-12">
-        <Card className="max-w-2xl mx-auto bg-white/10 backdrop-blur-lg border-white/20">
-          <div className="p-8 text-center">
-            <Loader2 className="w-16 h-16 text-purple-400 mx-auto mb-6 animate-spin" />
-            <h2 className="text-2xl font-bold text-white mb-4">Processing Your Transactions</h2>
-            <p className="text-white/70 mb-6">
-              Analyzing your Solana wallet and fetching transaction history...
-            </p>
-            <div className="space-y-2 text-left max-w-md mx-auto">
-              <div className="flex items-center text-white/60">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mr-3 animate-pulse"></div>
-                Fetching transaction data from Solana blockchain
+      <div className="min-h-screen bg-black">
+        <div className="container mx-auto px-6 py-12">
+          <Card className="max-w-2xl mx-auto bg-card border-border">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
-              <div className="flex items-center text-white/60">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mr-3 animate-pulse delay-300"></div>
-                Classifying DeFi and trading activities
+              <h2 className="text-2xl font-sans font-bold text-white mb-4">Processing Your Transactions</h2>
+              <p className="text-muted-foreground mb-6">
+                Analyzing your Solana wallet and fetching comprehensive transaction history...
+              </p>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-muted rounded-full h-2 mb-6">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${processingProgress}%` }}
+                ></div>
               </div>
-              <div className="flex items-center text-white/60">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse delay-700"></div>
-                Calculating cost basis and fair market values
+              <p className="text-sm text-muted-foreground mb-6">{processingProgress}% Complete</p>
+
+              <div className="space-y-3 text-left max-w-md mx-auto">
+                <div className="flex items-center text-muted-foreground">
+                  <Zap className="w-4 h-4 mr-3 text-primary" />
+                  Fetching transaction data from Solana blockchain
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <Shield className="w-4 h-4 mr-3 text-primary" />
+                  Classifying DeFi and trading activities
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <TrendingUp className="w-4 h-4 mr-3 text-primary" />
+                  Calculating cost basis and fair market values
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -132,52 +180,114 @@ export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({ wall
     return <TaxCalculator transactions={transactions} walletAddress={walletAddress} />;
   }
 
+  const stats = getTransactionStats();
+  const unclassifiedCount = getUnclassifiedCount();
+
   return (
-    <div className="container mx-auto px-6 py-12">
-      <div className="max-w-6xl mx-auto">
-        <Card className="bg-white/10 backdrop-blur-lg border-white/20 mb-8">
-          <div className="p-8 text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">Review Your Transactions</h2>
-            <p className="text-white/70 mb-6">
-              We found {transactions.length} transactions. Please review and classify them before generating your tax report.
-            </p>
-            
-            <div className="flex flex-wrap justify-center gap-4 mb-6">
-              <Badge className="bg-purple-500/20 text-purple-200 border-purple-500/30">
-                <ArrowUpDown className="w-4 h-4 mr-1" />
-                {transactions.filter(tx => tx.type === 'transfer').length} Transfers
-              </Badge>
-              <Badge className="bg-blue-500/20 text-blue-200 border-blue-500/30">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                {transactions.filter(tx => tx.type === 'trade').length} Trades
-              </Badge>
-              <Badge className="bg-green-500/20 text-green-200 border-green-500/30">
-                <Coins className="w-4 h-4 mr-1" />
-                {transactions.filter(tx => tx.type === 'staking').length} Staking Rewards
-              </Badge>
+    <div className="min-h-screen bg-black">
+      <div className="container mx-auto px-6 py-12">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <Card className="bg-card border-border mb-8">
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-sans font-bold text-white mb-4">Review Your Transactions</h2>
+                <p className="text-muted-foreground mb-6">
+                  We found <strong>{transactions.length.toLocaleString()}</strong> transactions. 
+                  Please review and classify them before generating your tax report.
+                </p>
+              </div>
+              
+              {/* Transaction Type Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <div className="text-center">
+                  <Badge className="bg-purple-500/20 text-purple-200 border-purple-500/30 mb-2">
+                    <ArrowUpDown className="w-4 h-4 mr-1" />
+                    Transfers
+                  </Badge>
+                  <div className="text-2xl font-mono font-bold text-white">{stats.transfer.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <Badge className="bg-blue-500/20 text-blue-200 border-blue-500/30 mb-2">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    Trades
+                  </Badge>
+                  <div className="text-2xl font-mono font-bold text-white">{stats.trade.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-500/30 mb-2">
+                    <Coins className="w-4 h-4 mr-1" />
+                    Staking
+                  </Badge>
+                  <div className="text-2xl font-mono font-bold text-white">{stats.staking.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <Badge className="bg-orange-500/20 text-orange-200 border-orange-500/30 mb-2">
+                    <Zap className="w-4 h-4 mr-1" />
+                    Swaps
+                  </Badge>
+                  <div className="text-2xl font-mono font-bold text-white">{stats.swap.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <Badge className="bg-cyan-500/20 text-cyan-200 border-cyan-500/30 mb-2">
+                    <Shield className="w-4 h-4 mr-1" />
+                    DeFi
+                  </Badge>
+                  <div className="text-2xl font-mono font-bold text-white">{stats.defi.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Classification Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="text-center p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="text-lg font-mono font-bold text-primary">{stats.personal.toLocaleString()}</div>
+                  <div className="text-sm text-muted-foreground">Personal</div>
+                </div>
+                <div className="text-center p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="text-lg font-mono font-bold text-blue-400">{stats.business.toLocaleString()}</div>
+                  <div className="text-sm text-muted-foreground">Business</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div className="text-lg font-mono font-bold text-yellow-400">{stats.unclassified.toLocaleString()}</div>
+                  <div className="text-sm text-muted-foreground">Unclassified</div>
+                </div>
+              </div>
+
+              {/* Warning and Action */}
+              {unclassifiedCount > 0 && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-6">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                    <div>
+                      <h4 className="font-sans font-semibold text-yellow-400 mb-1">Classification Required</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You have {unclassifiedCount.toLocaleString()} unclassified transactions. 
+                        Please classify all transactions as personal or business before generating your tax report.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-center">
+                <Button 
+                  onClick={proceedToCalculation}
+                  disabled={unclassifiedCount > 0}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3"
+                >
+                  <FileText className="w-5 h-5 mr-2" />
+                  Generate Tax Report
+                </Button>
+              </div>
             </div>
+          </Card>
 
-            <Button 
-              onClick={proceedToCalculation}
-              disabled={transactions.some(tx => tx.classification === 'unclassified')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3"
-            >
-              <FileText className="w-5 h-5 mr-2" />
-              Generate Tax Report
-            </Button>
-            
-            {transactions.some(tx => tx.classification === 'unclassified') && (
-              <p className="text-orange-300 text-sm mt-2">
-                Please classify all transactions before proceeding
-              </p>
-            )}
-          </div>
-        </Card>
-
-        <TransactionList 
-          transactions={transactions} 
-          onClassificationChange={updateTransactionClassification}
-        />
+          {/* Transaction Table */}
+          <TransactionTable 
+            transactions={transactions} 
+            onClassificationChange={updateTransactionClassification}
+          />
+        </div>
       </div>
     </div>
   );
