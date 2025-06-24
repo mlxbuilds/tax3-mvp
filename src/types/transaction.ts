@@ -9,16 +9,8 @@ export interface Transaction {
   signature: string;
   price?: number;
   classification: 'personal' | 'business' | 'unclassified';
-  costBasis?: number;
-  gainLoss?: number;
-  isWashSale?: boolean;
-}
-
-export interface FIFOPosition {
-  amount: number;
-  costBasis: number;
-  date: Date;
-  signature: string;
+  walletAddress?: string;
+  walletLabel?: string;
 }
 
 export interface TaxSummary {
@@ -29,7 +21,4 @@ export interface TaxSummary {
   longTermGains: number;
   stakingIncome: number;
   totalTransactions: number;
-  washSaleLosses: number;
-  form8949ShortTerm: Transaction[];
-  form8949LongTerm: Transaction[];
 }

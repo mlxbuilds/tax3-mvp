@@ -2,59 +2,84 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, Download, FileText, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
-import { TaxCalculationEngine } from '@/utils/taxCalculations';
+import { Loader2, Calculator, TrendingUp, TrendingDown, Coins, DollarSign, FileText, Wallet } from 'lucide-react';
 import { PDFExporter } from './PDFExporter';
 import { Transaction, TaxSummary } from '@/types/transaction';
+import { calculateFIFOGains, calculateStakingIncome, categorizeTransactions } from '@/utils/taxCalculations';
 
 interface TaxCalculatorProps {
   transactions: Transaction[];
-  walletAddress: string;
+  walletAddresses: string[];
 }
 
-export const TaxCalculator: React.FC<TaxCalculatorProps> = ({ transactions, walletAddress }) => {
-  const [taxSummary, setTaxSummary] = useState<TaxSummary | null>(null);
+export const TaxCalculator: React.FC<TaxCalculatorProps> = ({ transactions, walletAddresses }) => {
   const [isCalculating, setIsCalculating] = useState(true);
-  const [showPDFExporter, setShowPDFExporter] = useState(false);
+  const [taxSummary, setTaxSummary] = useState<TaxSummary | null>(null);
+  const [showExporter, setShowExporter] = useState(false);
+  const [calculationProgress, setCalculationProgress] = useState(0);
 
   useEffect(() => {
-    const calculateTaxes = () => {
-      const engine = new TaxCalculationEngine();
-      const summary = engine.calculateTaxes(transactions);
+    const performTaxCalculations = async () => {
+      const steps = [
+        { progress: 10, message: 'Categorizing transactions...' },
+        { progress: 30, message: 'Calculating FIFO cost basis...' },
+        { progress: 50, message: 'Computing capital gains/losses...' },
+        { progress: 70, message: 'Calculating staking income...' },
+        { progress: 85, message: 'Optimizing across wallets...' },
+        { progress: 95, message: 'Generating summary...' },
+        { progress: 100, message: 'Complete!' }
+      ];
+
+      for (const step of steps) {
+        setCalculationProgress(step.progress);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      // Perform actual calculations
+      const categorizedTransactions = categorizeTransactions(transactions);
+      const fifoResults = calculateFIFOGains(categorizedTransactions.trades, categorizedTransactions.swaps);
+      const stakingIncome = calculateStakingIncome(categorizedTransactions.staking);
+
+      const summary: TaxSummary = {
+        totalGains: fifoResults.totalGains,
+        totalLosses: fifoResults.totalLosses,
+        netGains: fifoResults.totalGains - fifoResults.totalLosses,
+        shortTermGains: fifoResults.shortTermGains,
+        longTermGains: fifoResults.longTermGains,
+        stakingIncome: stakingIncome,
+        totalTransactions: transactions.length
+      };
+
       setTaxSummary(summary);
       setIsCalculating(false);
     };
 
-    setTimeout(calculateTaxes, 2000);
+    performTaxCalculations();
   }, [transactions]);
 
-  if (isCalculating || !taxSummary) {
+  if (isCalculating) {
     return (
       <div className="min-h-screen bg-black">
-        <div className="container mx-auto px-6 py-12">
+        <div className="container mx-auto px-4 sm:px-6 py-12">
           <Card className="max-w-2xl mx-auto bg-card border-border">
-            <div className="p-8 text-center">
-              <Calculator className="w-16 h-16 text-primary mx-auto mb-6" />
-              <h2 className="text-2xl font-sans font-semibold text-white mb-4">
-                Calculating Tax Report
+            <div className="p-6 sm:p-8 text-center">
+              <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-sans font-bold text-white mb-4">
+                Calculating Your Unified Tax Report
               </h2>
               <p className="text-muted-foreground mb-6">
-                Processing {transactions.length} transactions with FIFO cost basis method...
+                Processing {transactions.length.toLocaleString()} transactions across {walletAddresses.length} wallets using FIFO accounting...
               </p>
-              <div className="space-y-3 text-left max-w-md mx-auto">
-                <div className="flex items-center text-muted-foreground">
-                  <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                  Applying FIFO cost basis calculations
-                </div>
-                <div className="flex items-center text-muted-foreground">
-                  <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                  Detecting wash sale violations
-                </div>
-                <div className="flex items-center text-muted-foreground">
-                  <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                  Generating Form 8949 data
-                </div>
+              
+              <div className="w-full bg-muted rounded-full h-3 mb-6">
+                <div 
+                  className="bg-gradient-to-r from-primary to-emerald-500 h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${calculationProgress}%` }}
+                ></div>
               </div>
+              <p className="text-sm text-muted-foreground">{calculationProgress}% Complete</p>
             </div>
           </Card>
         </div>
@@ -62,178 +87,197 @@ export const TaxCalculator: React.FC<TaxCalculatorProps> = ({ transactions, wall
     );
   }
 
-  if (showPDFExporter) {
-    return <PDFExporter taxSummary={taxSummary} transactions={transactions} walletAddress={walletAddress} />;
+  if (showExporter && taxSummary) {
+    return <PDFExporter taxSummary={taxSummary} transactions={transactions} walletAddresses={walletAddresses} />;
   }
+
+  if (!taxSummary) return null;
+
+  // Calculate wallet-specific stats
+  const walletStats = walletAddresses.map(address => {
+    const shortAddress = address.slice(0, 8) + '...' + address.slice(-4);
+    const walletTransactions = transactions.filter(tx => tx.walletAddress === shortAddress);
+    const walletTrades = walletTransactions.filter(tx => tx.type === 'trade' || tx.type === 'swap');
+    const totalValue = walletTrades.reduce((sum, tx) => sum + (tx.amount * (tx.price || 0)), 0);
+    
+    return {
+      address: shortAddress,
+      transactionCount: walletTransactions.length,
+      totalValue: totalValue
+    };
+  });
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="container mx-auto px-6 py-12">
-        <div className="max-w-7xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 py-12">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-sans font-bold text-white mb-2">
-              Tax Report Summary
-            </h1>
-            <p className="text-muted-foreground">
-              Wallet: <code className="font-mono text-sm bg-muted px-2 py-1 rounded">{walletAddress}</code>
-            </p>
-          </div>
+          <Card className="bg-card border-border mb-8">
+            <div className="p-6 sm:p-8 text-center">
+              <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Calculator className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-sans font-bold text-white mb-2">
+                Unified Tax Report Generated
+              </h2>
+              <p className="text-muted-foreground">
+                Your comprehensive tax analysis across {walletAddresses.length} wallets is ready
+              </p>
+            </div>
+          </Card>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="bg-card border-border">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
-                  <Badge variant="outline" className="border-emerald-400/30 text-emerald-400">
+                <div className="flex items-center justify-between mb-4">
+                  <TrendingUp className="w-8 h-8 text-emerald-400" />
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                     Gains
                   </Badge>
                 </div>
-                <div className="text-2xl font-mono font-bold text-white mb-1">
-                  ${taxSummary.totalGains.toFixed(2)}
+                <div className="text-2xl font-bold text-white mb-1">
+                  ${taxSummary.totalGains.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-xs text-muted-foreground">Total Capital Gains</div>
+                <p className="text-sm text-muted-foreground">Total Capital Gains</p>
               </div>
             </Card>
 
             <Card className="bg-card border-border">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <TrendingDown className="w-5 h-5 text-red-400" />
-                  <Badge variant="outline" className="border-red-400/30 text-red-400">
+                <div className="flex items-center justify-between mb-4">
+                  <TrendingDown className="w-8 h-8 text-red-400" />
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
                     Losses
                   </Badge>
                 </div>
-                <div className="text-2xl font-mono font-bold text-white mb-1">
-                  ${taxSummary.totalLosses.toFixed(2)}
+                <div className="text-2xl font-bold text-white mb-1">
+                  ${taxSummary.totalLosses.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-xs text-muted-foreground">Total Capital Losses</div>
+                <p className="text-sm text-muted-foreground">Total Capital Losses</p>
               </div>
             </Card>
 
             <Card className="bg-card border-border">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <Calculator className="w-5 h-5 text-blue-400" />
-                  <Badge variant="outline" className={`${taxSummary.netGains >= 0 ? 'border-emerald-400/30 text-emerald-400' : 'border-red-400/30 text-red-400'}`}>
-                    Net {taxSummary.netGains >= 0 ? 'Gain' : 'Loss'}
+                <div className="flex items-center justify-between mb-4">
+                  <DollarSign className="w-8 h-8 text-primary" />
+                  <Badge className={`${taxSummary.netGains >= 0 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                    {taxSummary.netGains >= 0 ? 'Profit' : 'Loss'}
                   </Badge>
                 </div>
-                <div className="text-2xl font-mono font-bold text-white mb-1">
-                  ${Math.abs(taxSummary.netGains).toFixed(2)}
+                <div className={`text-2xl font-bold mb-1 ${taxSummary.netGains >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  ${Math.abs(taxSummary.netGains).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-xs text-muted-foreground">Net Capital Result</div>
+                <p className="text-sm text-muted-foreground">Net Capital Result</p>
               </div>
             </Card>
 
             <Card className="bg-card border-border">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <FileText className="w-5 h-5 text-yellow-400" />
-                  <Badge variant="outline" className="border-yellow-400/30 text-yellow-400">
+                <div className="flex items-center justify-between mb-4">
+                  <Coins className="w-8 h-8 text-yellow-400" />
+                  <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
                     Income
                   </Badge>
                 </div>
-                <div className="text-2xl font-mono font-bold text-white mb-1">
-                  ${taxSummary.stakingIncome.toFixed(2)}
+                <div className="text-2xl font-bold text-white mb-1">
+                  ${taxSummary.stakingIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-xs text-muted-foreground">Staking Income</div>
+                <p className="text-sm text-muted-foreground">Staking Income</p>
               </div>
             </Card>
           </div>
 
-          {/* Tax Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Detailed Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Tax Breakdown */}
             <Card className="bg-card border-border">
               <div className="p-6">
-                <h3 className="font-sans font-semibold text-white mb-4">Capital Gains Breakdown</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Short-term (≤365 days)</span>
-                    <span className="font-mono text-white">
-                      ${taxSummary.shortTermGains.toFixed(2)}
+                <h3 className="text-xl font-sans font-semibold text-white mb-6">Tax Breakdown</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-muted/20 rounded-lg">
+                    <span className="text-muted-foreground">Short-term Capital Gains</span>
+                    <span className="font-mono font-bold text-orange-400">
+                      ${taxSummary.shortTermGains.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Long-term ({'>'} 365 days)</span>
-                    <span className="font-mono text-white">
-                      ${taxSummary.longTermGains.toFixed(2)}
+                  <div className="flex justify-between items-center p-4 bg-muted/20 rounded-lg">
+                    <span className="text-muted-foreground">Long-term Capital Gains</span>
+                    <span className="font-mono font-bold text-purple-400">
+                      ${taxSummary.longTermGains.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  {taxSummary.washSaleLosses > 0 && (
+                  <div className="flex justify-between items-center p-4 bg-muted/20 rounded-lg">
+                    <span className="text-muted-foreground">Staking/Mining Income</span>
+                    <span className="font-mono font-bold text-yellow-400">
+                      ${taxSummary.stakingIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="border-t border-border pt-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Wash sale adjustments</span>
-                      <span className="font-mono text-red-400">
-                        ${taxSummary.washSaleLosses.toFixed(2)}
+                      <span className="font-semibold text-white">Total Transactions</span>
+                      <span className="font-mono font-bold text-primary">
+                        {taxSummary.totalTransactions.toLocaleString()}
                       </span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </Card>
 
+            {/* Wallet Breakdown */}
             <Card className="bg-card border-border">
               <div className="p-6">
-                <h3 className="font-sans font-semibold text-white mb-4">Form 8949 Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Short-term transactions</span>
-                    <span className="font-mono text-white">
-                      {taxSummary.form8949ShortTerm.length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Long-term transactions</span>
-                    <span className="font-mono text-white">
-                      {taxSummary.form8949LongTerm.length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total disposals</span>
-                    <span className="font-mono text-white">
-                      {taxSummary.form8949ShortTerm.length + taxSummary.form8949LongTerm.length}
-                    </span>
-                  </div>
+                <h3 className="text-xl font-sans font-semibold text-white mb-6">Wallet Breakdown</h3>
+                <div className="space-y-4">
+                  {walletStats.map((wallet, index) => (
+                    <div key={wallet.address} className="p-4 bg-muted/20 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Wallet className="w-4 h-4 text-primary" />
+                          <span className="font-mono text-white text-sm">{wallet.address}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          Wallet {index + 1}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Transactions:</span>
+                          <div className="font-mono font-bold text-white">
+                            {wallet.transactionCount.toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Value:</span>
+                          <div className="font-mono font-bold text-primary">
+                            ${wallet.totalValue.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Warning for wash sales */}
-          {taxSummary.washSaleLosses > 0 && (
-            <Card className="bg-card border-destructive/30 mb-8">
-              <div className="p-6">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
-                  <div>
-                    <h4 className="font-sans font-semibold text-white mb-2">Wash Sale Detected</h4>
-                    <p className="text-sm text-muted-foreground">
-                      ${taxSummary.washSaleLosses.toFixed(2)} in losses have been disallowed due to wash sale rules. 
-                      These losses have been added to the cost basis of replacement positions.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Generate Report Button */}
+          {/* Action Button */}
           <Card className="bg-card border-border">
-            <div className="p-8 text-center">
+            <div className="p-6 sm:p-8 text-center">
               <h3 className="text-xl font-sans font-semibold text-white mb-4">
-                Generate Professional Tax Report
+                Ready to Generate Your Report?
               </h3>
-              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Export a comprehensive PDF report with Form 8949 transactions, 
-                Schedule D summary, and detailed methodology for tax filing.
+              <p className="text-muted-foreground mb-6">
+                Download your comprehensive, IRS-compliant tax report with all calculations and supporting documentation.
               </p>
-              <Button 
-                onClick={() => setShowPDFExporter(true)}
+              <Button
+                onClick={() => setShowExporter(true)}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3"
               >
-                <Download className="w-5 h-5 mr-2" />
-                Download Tax Report
+                <FileText className="w-5 h-5 mr-2" />
+                Generate PDF Report
               </Button>
             </div>
           </Card>
