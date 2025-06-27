@@ -134,8 +134,8 @@ export const MultiWalletImport: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-lg mx-auto">
-                  <p className="text-sm text-blue-200">
+                            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 max-w-lg mx-auto">
+              <p className="text-sm text-muted-foreground">
                     <strong>🔒 Your keys stay safe:</strong> We only read public transaction data. 
                     Your private keys never leave your device.
                   </p>

@@ -33,8 +33,8 @@ export const TrustBadges: React.FC = () => {
             </div>
 
             <div className="text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-lg mx-auto mb-2">
-                <Zap className="w-6 h-6 text-blue-400" />
+                          <div className="flex items-center justify-center w-12 h-12 bg-primary/10 border border-primary/20 rounded-lg mx-auto mb-2">
+              <Zap className="w-6 h-6 text-primary" />
               </div>
               <div className="text-2xl font-bold text-foreground">3 min</div>
               <div className="text-xs text-muted-foreground">

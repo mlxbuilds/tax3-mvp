@@ -115,7 +115,7 @@ export const DemoSection: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Staking Income:</span>
-                        <div className="font-medium text-blue-400">+$456.20</div>
+                        <div className="font-medium text-emerald-400">+$456.20</div>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Total Taxes:</span>

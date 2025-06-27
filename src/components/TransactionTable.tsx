@@ -182,7 +182,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       case "transfer":
         return "bg-purple-500/20 text-purple-200 border-purple-500/30";
       case "trade":
-        return "bg-blue-500/20 text-blue-200 border-blue-500/30";
+        return "bg-primary/20 text-primary-foreground border-primary/30";
       case "staking":
         return "bg-emerald-500/20 text-emerald-200 border-emerald-500/30";
       case "swap":
@@ -338,7 +338,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     <Button
                       size="sm"
                       onClick={() => handleBulkClassification("personal")}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Users className="w-4 h-4 mr-1" />
                       Mark as Personal

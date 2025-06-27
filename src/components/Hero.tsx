@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 export const Hero: React.FC = () => {
   return (
     <div className="relative bg-background overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5" />
+      <div className="absolute inset-0 bg-gradient-to-br from-muted/20 to-muted/10" />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-4xl mx-auto pt-24 pb-16 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 text-center">
           <div className="mb-20">
@@ -16,7 +16,7 @@ export const Hero: React.FC = () => {
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-6">
               Generate IRS-compliant tax reports in 3 minutes. Save $500+ vs
-              hiring a CPA. Trusted by 2,500+ DeFi traders.
+              hiring a CPA. 
             </p>
             <div className="flex flex-wrap justify-center gap-4 mb-10">
               <div className="flex items-center text-sm text-muted-foreground">
@@ -24,11 +24,11 @@ export const Hero: React.FC = () => {
                 No CPA fees (save $500+)
               </div>
               <div className="flex items-center text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
                 3-minute processing
               </div>
               <div className="flex items-center text-sm text-muted-foreground">
-                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                <span className="w-2 h-2 bg-muted-foreground rounded-full mr-2"></span>
                 Form 8949 ready
               </div>
             </div>

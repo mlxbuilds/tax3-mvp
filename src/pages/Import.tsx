@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MultiWalletImport } from '@/components/MultiWalletImport';
 
 import { Footer } from '@/components/Footer';
-import { ArrowLeft, Calculator } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Import = () => {
@@ -22,12 +22,12 @@ const Import = () => {
             </Link>
             
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center">
-                <Calculator className="w-3 h-3 text-primary" />
+            <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+                <img src="/logo.png" alt="Tax3 Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-sans font-semibold text-sm text-foreground">Tax3</span>
-            </div>
+            </Link>
           </div>
         </div>
       </header>
