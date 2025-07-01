@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MultiWalletImport } from '@/components/MultiWalletImport';
+import { WalletConnection } from '@/components/WalletConnection';
 
 import { Footer } from '@/components/Footer';
 import { ArrowLeft } from 'lucide-react';
@@ -34,7 +34,7 @@ const Import = () => {
 
       {/* Main Content */}
       <main className="flex-1">
-        <MultiWalletImport />
+        <WalletConnection />
       </main>
 
       <Footer />

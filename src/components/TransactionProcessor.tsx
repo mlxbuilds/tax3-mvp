@@ -16,6 +16,8 @@ import {
 import { TransactionTable } from "./TransactionTable";
 import { TaxCalculator } from "./TaxCalculator";
 import { Transaction } from "@/types/transaction";
+import { SolanaDataFetcher } from "@/utils/solanaDataFetcher";
+import { useConnection } from '@solana/wallet-adapter-react';
 
 interface TransactionProcessorProps {
   walletAddresses: string[];
@@ -24,6 +26,7 @@ interface TransactionProcessorProps {
 export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({
   walletAddresses,
 }) => {
+  const { connection } = useConnection();
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currentStep, setCurrentStep] = useState<
@@ -31,136 +34,83 @@ export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({
   >("processing");
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentWallet, setCurrentWallet] = useState(0);
+  const [error, setError] = useState<string>('');
 
-  // Generate comprehensive mock transaction data for multiple wallets
+  // Fetch real transaction data from Solana blockchain
   useEffect(() => {
-    const generateUnifiedMockDataset = (): Transaction[] => {
-      const mockData: Transaction[] = [];
-      const tokens = [
-        "SOL",
-        "USDC",
-        "USDT",
-        "RAY",
-        "SRM",
-        "MNGO",
-        "ORCA",
-        "STEP",
-        "COPE",
-        "MAPS",
-        "BONK",
-        "JUP",
-      ];
-      const types: Array<"transfer" | "trade" | "staking" | "swap" | "defi"> = [
-        "transfer",
-        "trade",
-        "staking",
-        "swap",
-        "defi",
-      ];
-      const directions: Array<"in" | "out"> = ["in", "out"];
+    const fetchRealTransactionData = async () => {
+      setError('');
+      setIsLoading(true);
+      setCurrentStep("processing");
+      
+      try {
+        const dataFetcher = new SolanaDataFetcher(connection.rpcEndpoint);
+        
+        // Test connection first
+        const isConnected = await dataFetcher.testConnection();
+        if (!isConnected) {
+          throw new Error('Unable to connect to Solana network');
+        }
 
-      // Generate transactions for each wallet
-      walletAddresses.forEach((walletAddress, walletIndex) => {
-        // Generate between 200-3000 transactions per wallet
-        const transactionCount = Math.floor(Math.random() * 2800) + 200;
+        const allTransactions: Transaction[] = [];
+        
+        // Process each wallet sequentially with progress updates
+        for (let i = 0; i < walletAddresses.length; i++) {
+          const walletAddress = walletAddresses[i];
+          setCurrentWallet(i);
+          
+          // Update progress based on wallet being processed
+          const baseProgress = (i / walletAddresses.length) * 80; // 80% for fetching
+          setProcessingProgress(baseProgress + 10);
 
-        for (let i = 0; i < transactionCount; i++) {
-          const token = tokens[Math.floor(Math.random() * tokens.length)];
-          const type = types[Math.floor(Math.random() * types.length)];
-          const direction =
-            directions[Math.floor(Math.random() * directions.length)];
-
-          // Generate realistic amounts based on token
-          let amount: number;
-          let price: number;
-
-          if (token === "SOL") {
-            amount = Math.random() * 1000 + 0.1;
-            price = Math.random() * 100 + 50; // $50-150
-          } else if (token === "USDC" || token === "USDT") {
-            amount = Math.random() * 50000 + 10;
-            price = 1.0;
-          } else {
-            amount = Math.random() * 100000 + 1;
-            price = Math.random() * 10 + 0.01; // $0.01-10
+          try {
+            console.log(`Fetching transactions for wallet: ${walletAddress}`);
+            const walletTransactions = await dataFetcher.fetchWalletTransactions(walletAddress, 1000);
+            
+            console.log(`Found ${walletTransactions.length} transactions for wallet ${i + 1}`);
+            allTransactions.push(...walletTransactions);
+            
+            // Update progress for completed wallet
+            setProcessingProgress(baseProgress + 20);
+          } catch (walletError) {
+            console.error(`Error fetching transactions for wallet ${walletAddress}:`, walletError);
+            // Continue processing other wallets even if one fails
           }
-
-          // Generate date within last 2 years
-          const startDate = new Date("2022-01-01");
-          const endDate = new Date();
-          const randomDate = new Date(
-            startDate.getTime() +
-              Math.random() * (endDate.getTime() - startDate.getTime())
-          );
-
-          mockData.push({
-            id: `tx_${walletIndex}_${i + 1}`,
-            type,
-            direction,
-            amount,
-            token,
-            timestamp: randomDate,
-            signature: `${Math.random()
-              .toString(36)
-              .substring(2)}${Math.random()
-              .toString(36)
-              .substring(2)}${Math.random().toString(36).substring(2)}`,
-            price,
-            classification: "unclassified",
-            walletAddress:
-              walletAddress.slice(0, 8) + "..." + walletAddress.slice(-4),
-            walletLabel: `Wallet ${walletIndex + 1}`,
-          });
         }
-      });
 
-      return mockData.sort(
-        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-      );
+        // Final processing steps
+        setProcessingProgress(85);
+        console.log(`Total transactions fetched: ${allTransactions.length}`);
+
+        // Sort all transactions by timestamp
+        const sortedTransactions = allTransactions.sort(
+          (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+        );
+
+        setProcessingProgress(95);
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setTransactions(sortedTransactions);
+        setProcessingProgress(100);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setIsLoading(false);
+        setCurrentStep("review");
+
+        if (sortedTransactions.length === 0) {
+          setError('No transactions found for the connected wallets. This could be because the wallets are new or have no transaction history.');
+        }
+
+      } catch (error) {
+        console.error('Error fetching transaction data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch transaction data');
+        setIsLoading(false);
+      }
     };
 
-    const simulateProcessing = () => {
-      const intervals = [
-        { progress: 5, message: "Initializing unified analysis..." },
-        { progress: 15, message: "Connecting to Solana RPC nodes..." },
-        { progress: 30, message: "Fetching transaction signatures..." },
-        { progress: 50, message: "Parsing transaction data across wallets..." },
-        { progress: 65, message: "Fetching historical token prices..." },
-        { progress: 80, message: "Cross-wallet duplicate detection..." },
-        { progress: 90, message: "Optimizing cost basis calculations..." },
-        { progress: 95, message: "Generating unified report..." },
-        { progress: 100, message: "Processing complete!" },
-      ];
-
-      let currentIndex = 0;
-      const updateProgress = () => {
-        if (currentIndex < intervals.length) {
-          setProcessingProgress(intervals[currentIndex].progress);
-
-          // Update current wallet being processed
-          const walletProgress = Math.floor(
-            (intervals[currentIndex].progress / 100) * walletAddresses.length
-          );
-          setCurrentWallet(
-            Math.min(walletProgress, walletAddresses.length - 1)
-          );
-
-          currentIndex++;
-          setTimeout(updateProgress, 600);
-        } else {
-          setTimeout(() => {
-            setTransactions(generateUnifiedMockDataset());
-            setIsLoading(false);
-            setCurrentStep("review");
-          }, 500);
-        }
-      };
-
-      updateProgress();
-    };
-
-    simulateProcessing();
-  }, [walletAddresses]);
+    fetchRealTransactionData();
+  }, [walletAddresses, connection]);
 
   const updateTransactionClassification = (
     id: string,
@@ -219,13 +169,19 @@ export const TransactionProcessor: React.FC<TransactionProcessorProps> = ({
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-sans font-bold text-white mb-4">
-                Processing Your Unified Report
+                Fetching Real Blockchain Data
               </h2>
               <p className="text-muted-foreground mb-6">
-                Analyzing {walletAddresses.length} wallet
-                {walletAddresses.length !== 1 ? "s" : ""} and generating
-                comprehensive tax analysis...
+                Connecting to Solana blockchain and fetching transaction history for {walletAddresses.length} wallet
+                {walletAddresses.length !== 1 ? "s" : ""}...
               </p>
+              
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center">
+                  <AlertTriangle className="w-5 h-5 mx-auto mb-2" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
 
               {/* Progress Bar */}
               <div className="w-full bg-muted rounded-full h-3 mb-6">
